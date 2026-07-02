@@ -542,6 +542,124 @@
       .sweep, .nav-pulse, .blip { animation: none !important; }
     }
 
+    /* ─── Error banner ─── */
+    .error-banner {
+      background: rgba(255, 77, 106, 0.08);
+      border: 1px solid rgba(255, 77, 106, 0.4);
+      border-radius: 2px;
+      padding: 0.65rem 0.85rem;
+      margin-bottom: 1.15rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--danger);
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .error-banner::before { content: '!'; font-weight: 700; }
+
+    /* ─── Scan results panel ─── */
+    .result-panel {
+      position: relative;
+      z-index: 5;
+      max-width: 460px;
+      width: 100%;
+      margin: -0.5rem auto 2rem;
+      background: rgba(13, 21, 37, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1.25rem 1.5rem 1.4rem;
+    }
+    .result-panel::before, .result-panel::after {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--good);
+      border-style: solid;
+      opacity: 0.5;
+    }
+    .result-panel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+    .result-panel::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    .result-title {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--good);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .result-title .rdot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--good); box-shadow: 0 0 6px var(--good);
+    }
+
+    .result-meta { margin-bottom: 0.9rem; }
+    .result-meta .row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      padding: 0.25rem 0;
+      color: var(--muted);
+    }
+    .result-meta .row span:last-child { color: var(--text); }
+
+    .port-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.9rem;
+    }
+    .port-chips:last-child { margin-bottom: 0; }
+    .port-chip {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--good);
+      background: rgba(45, 255, 138, 0.08);
+      border: 1px solid rgba(45, 255, 138, 0.3);
+      border-radius: 2px;
+      padding: 0.25rem 0.5rem;
+    }
+    .port-chip .svc { color: var(--muted); margin-left: 0.35rem; }
+    .port-chip.unknown {
+      color: var(--muted);
+      background: rgba(64, 85, 112, 0.12);
+      border-color: var(--border);
+    }
+    .group-label {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .group-label.known { color: var(--good); }
+    .group-label.ambiguous { color: #ffb454; }
+    .port-chip.ambiguous {
+      color: #ffb454;
+      background: rgba(255, 180, 84, 0.08);
+      border-color: rgba(255, 180, 84, 0.3);
+    }
+    .ambiguous-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 0.5rem;
+    }
+    .no-ports-msg {
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
     /* ─── Mobile ─── */
     @media (max-width: 520px) {
       nav { padding: 1rem; }
@@ -559,6 +677,7 @@
       .cross-v { height: 300px; }
       .sweep { width: 300px; height: 300px; }
       .history { padding: 0 1rem 2rem; }
+      .result-panel { max-width: 100%; padding: 1.1rem 1.25rem; }
       .history-table { font-size: 0.72rem; }
       .history-table th, .history-table td { padding: 0.5rem 0.65rem; }
     }
@@ -613,6 +732,10 @@
       <p class="card-tag">v1.0 &nbsp;—&nbsp; Open Source</p>
       <h1 class="card-title">Port<span class="accent">.</span>Scan</h1>
       <p class="card-sub">Discover open ports and services on any host or IP address.</p>
+
+      {% if error %}
+      <div class="error-banner">{{ error }}</div>
+      {% endif %}
 
       <!-- Replace action="/scan" with your Flask route -->
       <form action="/scan" method="POST">
@@ -675,6 +798,55 @@
     </div>
 
   </main>
+
+  <!-- ─── Latest scan result (only present right after a scan) ─── -->
+  {% if last_scan %}
+  <div class="result-panel">
+    <p class="result-title"><span class="rdot"></span>Scan Complete</p>
+    <div class="result-meta">
+      <div class="row"><span>Target</span><span>{{ last_scan.target }}</span></div>
+      <div class="row"><span>Resolved IP</span><span>{{ last_scan.ip }}</span></div>
+      <div class="row"><span>Mode</span><span>{{ last_scan.mode | upper }}</span></div>
+      <div class="row"><span>Open ports</span><span>{{ last_scan.open_ports | length }}</span></div>
+    </div>
+    {% if last_scan.open_ports %}
+
+      {% if last_scan.known_ports %}
+      <p class="group-label known">Known services</p>
+      <div class="port-chips">
+        {% for port, service in last_scan.known_ports %}
+        <span class="port-chip">{{ port }}<span class="svc">{{ service }}</span></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if last_scan.unknown_ports %}
+      <p class="group-label">Unrecognized</p>
+      <div class="port-chips">
+        {% for port in last_scan.unknown_ports %}
+        <span class="port-chip unknown">{{ port }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    {% else %}
+    <p class="no-ports-msg">No open ports found in range.</p>
+    {% endif %}
+
+    {% if last_scan.ambiguous_ports %}
+    <p class="group-label ambiguous">No response ({{ last_scan.ambiguous_ports | length }})</p>
+    <div class="port-chips">
+      {% for port in last_scan.ambiguous_ports %}
+      <span class="port-chip ambiguous">{{ port }}</span>
+      {% endfor %}
+    </div>
+    <p class="ambiguous-note">
+      These UDP ports didn't reply and didn't return "unreachable" either — could
+      be open, could be filtered by a firewall. UDP can't tell the difference.
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <!-- ─── Scan History ─── -->
   {# Flask route: recent_scans = ScanHistory.query.order_by(ScanHistory.id.desc()).limit(10).all() #}
