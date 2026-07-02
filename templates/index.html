@@ -437,6 +437,105 @@
       100% { opacity: 0;   transform: scale(0.8); }
     }
 
+    /* ─── Scan History ─── */
+    .history {
+      padding: 0 2rem 2.5rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 860px;
+      margin: 0 auto 0.85rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .history-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+
+
+    .history-count {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* Scrollable wrapper so table doesn't overflow on narrow screens */
+    .table-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+
+    .history-table th {
+      text-align: left;
+      padding: 0.55rem 0.9rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-size: 0.62rem;
+      font-weight: 400;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+      white-space: nowrap;
+    }
+
+    .history-table td {
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .history-table tbody tr:last-child td { border-bottom: none; }
+
+    .history-table tbody tr:hover td {
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    .col-id   { color: var(--muted); width: 2.5rem; }
+    .col-ip   { color: var(--accent); }
+    .col-ports { color: #2dff8a; }
+    .col-ports.no-ports { color: var(--muted); }
+    .col-time { color: var(--muted); font-size: 0.72rem; }
+
+    .history-empty {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 1.75rem;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 2px;
+      letter-spacing: 0.06em;
+    }
+
     /* ─── Reduced motion ─── */
     @media (prefers-reduced-motion: reduce) {
       .sweep, .nav-pulse, .blip { animation: none !important; }
@@ -458,6 +557,9 @@
       .cross-h { width: 300px; }
       .cross-v { height: 300px; }
       .sweep { width: 300px; height: 300px; }
+      .history { padding: 0 1rem 2rem; }
+      .history-table { font-size: 0.72rem; }
+      .history-table th, .history-table td { padding: 0.5rem 0.65rem; }
     }
   </style>
 </head>
@@ -572,6 +674,46 @@
     </div>
 
   </main>
+
+  <!-- ─── Scan History ─── -->
+  {# Flask route: recent_scans = ScanHistory.query.order_by(ScanHistory.id.desc()).limit(10).all() #}
+  <section class="history">
+
+    <div class="history-header">
+      <span class="history-title">Recent Scans</span>
+      <span class="history-count">{{ recent_scans | length }} record(s)</span>
+    </div>
+
+    {% if recent_scans %}
+    <div class="table-wrap">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>IP Address</th>
+            <th>Open Ports</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in recent_scans %}
+          <tr>
+            <td class="col-id">{{ scan.id }}</td>
+            <td class="col-ip">{{ scan.ip_address }}</td>
+            <td class="col-ports {% if not scan.open_ports %}no-ports{% endif %}">
+              {{ scan.open_ports if scan.open_ports else '—' }}
+            </td>
+            <td class="col-time">{{ scan.timestamp }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="history-empty">No scans yet — run your first scan above.</p>
+    {% endif %}
+
+  </section>
 
   <!-- ─── Footer ─── -->
   <footer>
